@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Soil Results</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .result-box { max-width: 600px; margin: auto; padding: 20px; }
+        .deficiency { color: #d32f2f; margin: 15px 0; }
+        .recommendation { background: #e8f5e9; padding: 10px; margin: 10px 0; }
+        button { padding: 10px; background: #4CAF50; color: white; border: none; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/"><button>Waste Analysis</button></a>
+        <a href="/soil-analysis"><button>Soil Analysis</button></a>
+    </div>
+
+    <h1>Soil Analysis: {{ soil_type|title }}</h1>
+    
+    <div class="result-box">
+        <div class="deficiency">
+            <h3>🔍 Nutrient Deficiencies:</h3>
+            <ul>
+                {% for nutrient in deficiencies %}
+                <li>{{ nutrient }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="recommendations">
+            <h3>🌱 Recommended Waste Amendments:</h3>
+            {% for waste in recommendations %}
+            <div class="recommendation">
+                <h4>{{ waste.type|title }}</h4>
+                <ul>
+                    {% for nutrient, value in waste.nutrients.items() %}
+                    <li><strong>{{ nutrient }}:</strong> {{ value }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <a href="/soil-analysis"><button>← Analyze Another Soil</button></a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Waste Classifier</title>
+    <style>
+        body { font-family: Arial; margin: 20px; line-height: 1.6; }
+        .nav { margin-bottom: 20px; }
+        .upload-box { margin: 20px auto; padding: 20px; border: 2px dashed #ccc; max-width: 500px; }
+        .result { margin-top: 20px; padding: 20px; background: #f9f9f9; }
+        img { max-width: 200px; margin: 10px auto; display: block; }
+        #cameraPreview { display: none; width: 100%; max-width: 300px; margin: 10px auto; }
+        button { margin: 5px; padding: 10px 15px; background: #4CAF50; color: white; border: none; }
+        #submitBtn { display: none; background: #2196F3; }
+        .soil-selector { margin: 15px 0; padding: 15px; background: #f5f5f5; }
+        .nutrients { background: #e3f2fd; padding: 15px; margin: 10px 0; }
+        .soil-match { background: #e8f5e9; padding: 15px; margin: 10px 0; }
+        .non-biodegradable { background: #ffebee; padding: 15px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/"><button>Waste Analysis</button></a>
+        <a href="/soil-analysis"><button>Soil Analysis</button></a>
+    </div>
+
+    <h1>Waste Classification</h1>
+    
+    <div class="upload-box">
+        <form id="uploadForm" action="/predict" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="analysis_type" value="waste">
+            
+            <div class="soil-selector">
+                <label>Your Soil Type:</label>
+                <select name="soil_type" required>
+                    {% for soil_type, data in soil_db.items() %}
+                    <option value="{{ soil_type }}">{{ soil_type|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <button type="button" onclick="document.getElementById('fileInput').click()">
+                    📁 Upload Image
+                </button>
+                <input type="file" id="fileInput" name="file" accept="image/*" style="display: none;" onchange="handleFileUpload(this)">
+            </div>
+            
+            <div>
+                <button type="button" id="startCamera">📷 Open Camera</button>
+                <button type="button" id="captureBtn" style="display: none;">Capture Photo</button>
+            </div>
+            
+            <video id="cameraPreview" autoplay playsinline></video>
+            <canvas id="canvas" style="display: none;"></canvas>
+            
+            <button type="submit" id="submitBtn">🔍 Classify Waste</button>
+        </form>
+    </div>
+
+    {% if result %}
+    <div class="result">
+        <h3>Classification: {{ result.class|title }}</h3>
+        <img src="{{ result.image_path }}" alt="Classified waste">
+        
+        {% if result.class in ['plastic', 'trash'] %}
+            <div class="non-biodegradable">
+                <p><strong>{{ result.message }}</strong></p>
+            </div>
+        {% else %}
+            <div class="nutrients">
+                <h4>📊 Nutrient Content:</h4>
+                <ul>
+                    {% for key, value in result.nutrients.items() %}
+                    <li><strong>{{ key }}:</strong> {{ value }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <div class="soil-match">
+                <h4>🌱 Soil Compatibility ({{ result.soil_type|title }} Soil):</h4>
+                <ul>
+                    {% for rec in result.soil_recommendations %}
+                    <li>{{ rec }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <script>
+        const cameraPreview = document.getElementById('cameraPreview');
+        const startCameraBtn = document.getElementById('startCamera');
+        const captureBtn = document.getElementById('captureBtn');
+        const canvas = document.getElementById('canvas');
+        const fileInput = document.getElementById('fileInput');
+        const submitBtn = document.getElementById('submitBtn');
+        let stream = null;
+
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                cameraPreview.srcObject = stream;
+                cameraPreview.style.display = 'block';
+                captureBtn.style.display = 'inline-block';
+                startCameraBtn.style.display = 'none';
+            } catch (err) {
+                alert('Camera error: ' + err.message);
+            }
+        });
+
+        captureBtn.addEventListener('click', () => {
+            canvas.width = cameraPreview.videoWidth;
+            canvas.height = cameraPreview.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+            stream.getTracks().forEach(track => track.stop());
+            
+            canvas.toBlob(blob => {
+                const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+                submitBtn.style.display = 'inline-block';
+                submitBtn.click();
+            }, 'image/jpeg', 0.85);
+        });
+
+        function handleFileUpload(input) {
+            if (input.files && input.files[0]) {
+                submitBtn.style.display = 'inline-block';
+            }
+        }
+    </script>
+</body>
+</html>

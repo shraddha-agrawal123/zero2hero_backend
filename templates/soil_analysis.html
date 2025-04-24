@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Soil Analysis</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .analysis-box { max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; }
+        button { padding: 10px; margin: 10px 0; background: #4CAF50; color: white; border: none; }
+        select { padding: 10px; margin: 10px 0; width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/"><button>Waste Analysis</button></a>
+        <a href="/soil-analysis"><button>Soil Analysis</button></a>
+    </div>
+
+    <h1>Soil Nutrient Analysis</h1>
+    
+    <div class="analysis-box">
+        <form action="/predict" method="post">
+            <input type="hidden" name="analysis_type" value="soil">
+            
+            <h3>Select Your Soil Type:</h3>
+            <select name="soil_type" required>
+                {% for soil_type, data in soil_db.items() %}
+                <option value="{{ soil_type }}">{{ soil_type|title }}</option>
+                {% endfor %}
+            </select>
+            
+            <button type="submit">Analyze Soil</button>
+        </form>
+    </div>
+</body>
+</html>

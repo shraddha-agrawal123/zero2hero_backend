@@ -1,0 +1,529 @@
+Scientific Accuracy - Values from:
+USDA Composting Guidelines
+EPA Municipal Solid Waste Reports
+Cornell Waste Management Institute
+
+Practical Tips - Actionable advice for each category
+
+Key Metrics Included:
+Macro-nutrients (N-P-K)
+Carbon:Nitrogen ratios (critical for composting)
+Decomposition timelines
+Special element content (Ca, Mg, Si)
+
+Non-Biodegradable Wastes - Clear warnings for plastic/trash
+
+
+
+wait i have these codes only which we made yesterday.
+app.py
+from flask import Flask, render_template, request, redirect, url_for
+import os
+from werkzeug.utils import secure_filename
+import tensorflow as tf
+from tensorflow.keras.preprocessing import image
+import numpy as np
+from PIL import Image
+from io import BytesIO
+import base64
+import re
+
+app = Flask(__name__)
+
+# Configure upload folder
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Load the trained model
+model = tf.keras.models.load_model('waste_classifier_model.h5')
+
+# Class labels (update with your dataset's class names)
+class_labels = ['cardboard', 'fruitpeel', 'garden', 'paper', 'plastic', 'trash', 'vegetable']
+
+# Nutrient database (replace with researched values)
+nutrient_db = {
+    'vegetable': {
+        'Nitrogen (N)': '2.5-4% of dry weight',
+        'Phosphorus (P)': '0.3-0.8% of dry weight',
+        'Potassium (K)': '3-6% of dry weight',
+        'Carbon:Nitrogen (C:N)': '15:1 (Ideal for composting)',
+        'Decomposition Time': '2-4 weeks',
+        'Tip': 'Chop into small pieces for faster breakdown. Mix with browns (dry leaves) to balance C:N ratio.'
+    },
+    'fruitpeel': {
+        'Nitrogen (N)': '1.5-3% of dry weight',
+        'Potassium (K)': '8-12% of dry weight (Excellent source)',
+        'Calcium (Ca)': '0.5-2% of dry weight',
+        'Magnesium (Mg)': '0.2-0.5% of dry weight',
+        'Carbon:Nitrogen (C:N)': '25:1',
+        'Decomposition Time': '3-6 weeks',
+        'Tip': 'Citrus peels decompose slower - use sparingly. Banana peels are potassium-rich.'
+    },
+    'garden': {
+        'Nitrogen (N)': '1.5-3% of dry weight',
+        'Phosphorus (P)': '0.2-0.5% of dry weight',
+        'Potassium (K)': '1-3% of dry weight',
+        'Carbon:Nitrogen (C:N)': '30:1',
+        'Silica (Si)': '2-5% (Strengthens plant cells)',
+        'Decomposition Time': '4-8 weeks',
+        'Tip': 'Shred woody materials to speed up decomposition. Excellent for mulch.'
+    },
+    'paper': {
+        'Carbon:Nitrogen (C:N)': '200:1 (High carbon)',
+        'Lignin Content': '20-30% (Slow to decompose)',
+        'Calcium (Ca)': '0.5-1% (From bleached paper)',
+        'Decomposition Time': '2-6 months',
+        'Tip': 'Soak in water before composting. Avoid glossy/colored paper. Best for vermicomposting.'
+    },
+    'cardboard': {
+        'Carbon:Nitrogen (C:N)': '350:1 (Very high carbon)',
+        'Lignin Content': '25-35%',
+        'Decomposition Time': '6-12 months',
+        'Tip': 'Shred and moisten thoroughly. Ideal for sheet mulching or worm bins.'
+    }
+}
+
+#soil database 
+soil_db = {
+    'clay': {
+        'deficiencies': ['Nitrogen (N)', 'Phosphorus (P)', 'Organic Matter'],
+        'pH': '5.0-7.0',
+        'suitable_wastes': ['fruitpeel', 'vegetable', 'garden']
+    },
+    'sandy': {
+        'deficiencies': ['Potassium (K)', 'Magnesium (Mg)', 'Water Retention'],
+        'pH': '4.5-6.5',
+        'suitable_wastes': ['cardboard', 'paper', 'garden'] 
+    },
+    'loamy': {
+        'deficiencies': ['Calcium (Ca)', 'Sulfur (S)'],
+        'pH': '6.0-7.5',
+        'suitable_wastes': ['vegetable', 'fruitpeel']
+    },
+    'silty': {
+        'deficiencies': ['Zinc (Zn)', 'Manganese (Mn)'],
+        'pH': '5.5-7.0',
+        'suitable_wastes': ['fruitpeel', 'garden']
+    }
+}
+
+def get_soil_recommendations(waste_type, soil_type):
+    waste_nutrients = nutrient_db.get(waste_type, {})
+    soil_needs = soil_db.get(soil_type, {}).get('deficiencies', [])
+    
+    recommendations = []
+    for nutrient, value in waste_nutrients.items():
+        if any(nutrient.startswith(def_nutrient) for def_nutrient in soil_needs):
+            recommendations.append(f"• {nutrient}: {value} (Addresses {soil_type}'s deficiency)")
+    return recommendations or ["No significant nutrient match"]
+
+def preprocess_image(img):
+    img = img.resize((150, 150))
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0) / 255.0
+    return img_array
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+# ... (keep all imports and initial setup)
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    # Get soil type from form (works for both upload and camera)
+    soil_type = request.form.get('soil_type', 'loamy')  # Default to loamy
+    
+    # Handle file upload
+    if 'file' in request.files:
+        file = request.files['file']
+        if file.filename != '':
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            img = Image.open(filepath)
+    
+    # Handle camera capture (base64)
+    elif 'file' in request.form:
+        base64_str = request.form['file']
+        if base64_str.startswith('data:image'):
+            base64_str = base64_str.split(',')[1]
+        img_data = base64.b64decode(base64_str)
+        img = Image.open(BytesIO(img_data))
+        filename = 'camera_capture.jpg'
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        img.save(filepath)
+    
+    else:
+        return redirect(url_for('home'))
+    
+    # Process image and predict
+    img_array = preprocess_image(img)
+    prediction = model.predict(img_array)
+    predicted_class = class_labels[np.argmax(prediction)]
+    
+    # Prepare result
+    if predicted_class in ['plastic', 'trash']:
+        result = {
+            'class': predicted_class,
+            'message': '🚫 Non-biodegradable! Dispose of properly.',
+            'image_path': filepath,
+            'soil_type': soil_type  # Still include soil type even for non-biodegradable
+        }
+    else:
+        nutrients = nutrient_db.get(predicted_class, {})
+        result = {
+            'class': predicted_class,
+            'message': '✅ Biodegradable! Use for composting.',
+            'nutrients': nutrients,
+            'image_path': filepath,
+            'soil_recommendations': get_soil_recommendations(predicted_class, soil_type),
+            'soil_type': soil_type
+        }
+    
+    return render_template('index.html', result=result,
+                     soil_db=soil_db)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+train_model.py
+# Import libraries
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Define paths
+train_data_dir = "garbage_dataset"  # Path to your dataset folder (with subfolders for each class)
+
+# Image parameters
+img_width, img_height = 150, 150
+batch_size = 32
+
+# Data augmentation (to prevent overfitting)
+train_datagen = ImageDataGenerator(
+    rescale=1.0 / 255,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    validation_split=0.2  # 80% training, 20% validation
+)
+
+# Load dataset
+train_generator = train_datagen.flow_from_directory(
+    train_data_dir,
+    target_size=(img_width, img_height),
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='training'  # Training subset
+)
+
+validation_generator = train_datagen.flow_from_directory(
+    train_data_dir,
+    target_size=(img_width, img_height),
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='validation'  # Validation subset
+)
+
+# Define CNN model architecture
+model = Sequential([
+    Conv2D(32, (3, 3), activation='relu', input_shape=(img_width, img_height, 3)),
+    MaxPooling2D(2, 2),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D(2, 2),
+    Conv2D(128, (3, 3), activation='relu'),
+    MaxPooling2D(2, 2),
+    Flatten(),
+    Dense(512, activation='relu'),
+    Dropout(0.5),  # Reduce overfitting
+    Dense(len(train_generator.class_indices), activation='softmax')  # Output layer
+])
+
+# Compile the model
+model.compile(
+    optimizer=Adam(learning_rate=0.001),
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# Train the model
+history = model.fit(
+    train_generator,
+    steps_per_epoch=train_generator.samples // batch_size,
+    epochs=10,  # Adjust epochs based on your dataset size
+    validation_data=validation_generator,
+    validation_steps=validation_generator.samples // batch_size
+)
+
+# Save the trained model
+model.save("waste_classifier_model.h5")
+
+# Plot training history (optional)
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend()
+plt.savefig("training_plot.png")  # Saves the plot for reference
+plt.show()
+
+print("Training complete! Model saved as 'waste_classifier_model.h5'.")
+
+index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waste Classifier</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            margin: 20px; 
+            line-height: 1.6;
+        }
+        .upload-box { 
+            margin: 20px auto; 
+            padding: 20px; 
+            border: 2px dashed #ccc; 
+            max-width: 500px;
+            border-radius: 8px;
+        }
+        .result { 
+            margin-top: 20px; 
+            padding: 20px; 
+            background: #f9f9f9; 
+            border-radius: 8px;
+            text-align: left;
+        }
+        img { 
+            max-width: 200px; 
+            margin: 10px auto;
+            display: block;
+            border-radius: 4px;
+        }
+        #cameraPreview { 
+            display: none; 
+            width: 100%; 
+            max-width: 300px;
+            margin: 10px auto;
+            border-radius: 4px;
+        }
+        button { 
+            margin: 5px; 
+            padding: 10px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #submitBtn { 
+            display: none;
+            background: #2196F3;
+        }
+        #submitBtn:hover {
+            background: #0b7dda;
+        }
+        .soil-selector {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .soil-selector label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .soil-selector select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .soil-match {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        .nutrients {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+        }
+        .non-biodegradable {
+            background: #ffebee;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>Waste Classification for Soil Enrichment</h1>
+    
+    <div class="upload-box">
+        <h3>Choose an Option</h3>
+        
+        <form id="uploadForm" action="/predict" method="post" enctype="multipart/form-data">
+            <!-- Soil Type Selector -->
+            <div class="soil-selector">
+                <label for="soilType">Your Soil Type:</label>
+                <select name="soil_type" id="soilType" required>
+                    <option value="clay">Clay</option>
+                    <option value="sandy">Sandy</option>
+                    <option value="loamy" selected>Loamy</option>
+                    <option value="silty">Silty</option>
+                </select>
+            </div>
+
+            <!-- Upload Option -->
+            <div>
+                <button type="button" onclick="document.getElementById('fileInput').click()">
+                    📁 Upload Image
+                </button>
+                <input type="file" id="fileInput" name="file" accept="image/*" 
+                       style="display: none;" onchange="handleFileUpload(this)">
+            </div>
+            
+            <!-- Camera Option -->
+            <div>
+                <button type="button" id="startCamera">
+                    📷 Open Camera
+                </button>
+                <button type="button" id="captureBtn" style="display: none;">
+                    Capture Photo
+                </button>
+            </div>
+            
+            <!-- Camera Preview -->
+            <video id="cameraPreview" autoplay playsinline></video>
+            <canvas id="canvas" style="display: none;"></canvas>
+            
+            <!-- Submit Button -->
+            <button type="submit" id="submitBtn">
+                🔍 Classify Waste
+            </button>
+        </form>
+    </div>
+
+    <!-- Results Section -->
+    <div class="result">
+        {% if result %}
+            <h3>Classification: {{ result.class|title }}</h3>
+            <img src="{{ result.image_path }}" alt="Classified waste image">
+            
+            {% if result.class in ['plastic', 'trash'] %}
+                <div class="non-biodegradable">
+                    <p><strong>{{ result.message }}</strong></p>
+                    <p>ℹ️ Soil recommendations not available for non-biodegradable waste.</p>
+                </div>
+            {% else %}
+                <!-- Nutrients Display -->
+                <div class="nutrients">
+                    <h4>📊 Nutrient Content:</h4>
+                    <ul>
+                        {% for key, value in result.nutrients.items() %}
+                        <li><strong>{{ key }}:</strong> {{ value }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                
+                <!-- Soil Compatibility -->
+                <div class="soil-match">
+                    <h4>🌱 Soil Compatibility ({{ result.soil_type|title }} Soil):</h4>
+                    <ul>
+                        {% if result.soil_recommendations %}
+                            {% for rec in result.soil_recommendations %}
+                            <li>{{ rec }}</li>
+                            {% endfor %}
+                        {% else %}
+                            <li>No specific nutrient deficiencies matched</li>
+                        {% endif %}
+                    </ul>
+                    <p><strong>💡 Tip:</strong> Best waste types for {{ result.soil_type }} soil: 
+                    {{ soil_db[result.soil_type]['suitable_wastes']|join(', ') }}</p>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <script>
+        // Camera functionality
+        const cameraPreview = document.getElementById('cameraPreview');
+        const startCameraBtn = document.getElementById('startCamera');
+        const captureBtn = document.getElementById('captureBtn');
+        const canvas = document.getElementById('canvas');
+        const fileInput = document.getElementById('fileInput');
+        const submitBtn = document.getElementById('submitBtn');
+        let stream = null;
+
+        // Start camera
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } // Rear camera
+                });
+                cameraPreview.srcObject = stream;
+                cameraPreview.style.display = 'block';
+                captureBtn.style.display = 'inline-block';
+                startCameraBtn.style.display = 'none';
+            } catch (err) {
+                alert('Camera error: ' + err.message);
+            }
+        });
+
+        // Capture image
+        captureBtn.addEventListener('click', () => {
+            // Set canvas dimensions to match video
+            canvas.width = cameraPreview.videoWidth;
+            canvas.height = cameraPreview.videoHeight;
+            
+            // Draw video frame to canvas
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+            
+            // Stop camera stream
+            stream.getTracks().forEach(track => track.stop());
+            
+            // Convert to file and trigger form
+            canvas.toBlob(blob => {
+                const file = new File([blob], 'capture.jpg', { 
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
+                
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+                
+                // Show submit button
+                submitBtn.style.display = 'inline-block';
+                submitBtn.click(); // Auto-submit
+            }, 'image/jpeg', 0.85); // 85% quality
+        });
+
+        // Handle file selection
+        function handleFileUpload(input) {
+            if (input.files && input.files[0]) {
+                submitBtn.style.display = 'inline-block';
+            }
+        }
+    </script>
+</body>
+</html>
+
+now tell me where should i make changes
