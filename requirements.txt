@@ -6,14 +6,15 @@ Werkzeug>=3.1       # optional
 
 # --- ML / AI ---
 tensorflow-cpu>=2.20
-numpy>=1.26
+numpy==1.26.4
+
 matplotlib>=3.9
 pillow>=10
 h5py>=3.13
 gdown>=4.7
 
 # --- Computer Vision ---
-opencv-python-headless==4.8.0.74
+opencv-python-headless==4.10.0.84
 scikit-image>=0.24
 
 # --- Database ---
@@ -25,5 +26,5 @@ geopy>=2.4
 
 # --- Build tools ---
 pip>=25.2
-setuptools>=68.0
-wheel>=0.42
+setuptools
+wheel
