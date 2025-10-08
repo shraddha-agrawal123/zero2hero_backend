@@ -1,32 +1,33 @@
 # --- Flask & Extensions ---
-Flask==3.0.3
-Flask-Cors==4.0.1
-Flask-PyMongo==2.3.0
-Werkzeug==3.1.3   # optional (installed automatically with Flask, but safe to pin)
+Flask>=3.0
+Flask-Cors>=4.0
+Flask-PyMongo>=2.3
+Werkzeug>=3.1       # optional, installed with Flask
 
 # --- ML / AI ---
-tensorflow==2.20.0
-numpy==1.26.4
-matplotlib==3.9.2
-pillow==10.4.0
-h5py==3.13.0
-gdown==4.7.1       # for downloading model from Google Drive
+tensorflow-cpu>=2.20  # CPU version works on free-tier Render
+numpy>=1.26           # let pip resolve compatible version automatically
+matplotlib>=3.9
+pillow>=10
+h5py>=3.13
+gdown>=4.7            # download model from Google Drive
 
 # --- Computer Vision ---
-opencv-python==4.10.0.84
-scikit-image==0.24.0
+opencv-python>=4.10
+scikit-image>=0.24
 
 # --- Database ---
-pymongo==4.9.2
-dnspython==2.6.1   # needed for MongoDB Atlas SRV URLs
-bson==0.5.10       # optional (comes with pymongo, but safe to include)
+pymongo>=4.9
+dnspython>=2.6        # needed for MongoDB Atlas SRV URLs
 
 # --- Geolocation ---
-geopy==2.4.1
+geopy>=2.4
 
 # --- Utilities ---
-wrapt==1.17.2      # auto-installed with TensorFlow, optional to pin
-zstandard==0.24.0  # optional, used for compression (pulled in by ML libs)
-pip>=24.0
+wrapt                 # optional, installed by TensorFlow automatically
+zstandard             # optional, compression library
+
+# --- Build tools (ensure modern pip) ---
+pip>=25.2
 setuptools>=68.0
 wheel>=0.42

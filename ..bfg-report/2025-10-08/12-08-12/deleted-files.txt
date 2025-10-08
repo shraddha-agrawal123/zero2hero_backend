@@ -1,0 +1,1 @@
+0b0734e5c8817fc204c04113bd83f4b992f1ccb7 228495448 waste_classifier_model.h5
