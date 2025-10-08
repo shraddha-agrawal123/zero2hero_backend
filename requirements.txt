@@ -6,21 +6,20 @@ pymongo==4.9.2
 dnspython==2.6.1
 
 # --- ML / AI ---
-numpy>=1.26.0,<2.0.0
-tensorflow-cpu>=2.16.1
-h5py==3.13.0
-matplotlib==3.9.2
-pillow==10.4.0
+numpy==1.24.3
+tensorflow-cpu==2.13.0
+h5py==3.9.0
+matplotlib==3.7.2
+pillow==10.0.1
 gdown==4.7.1
 
 # --- Computer Vision ---
-opencv-python-headless>=4.9.0.80
-scikit-image==0.24.0
+opencv-python-headless==4.8.1.78
+scikit-image==0.21.0
 
 # --- Utilities ---
 geopy==2.4.1
-wrapt==1.17.2
-zstandard==0.24.0
-setuptools>=68.0
-wheel>=0.42
-pip>=25.1.1
+wrapt==1.15.0
+zstandard==0.22.0
+setuptools==68.2.2
+wheel==0.41.3
