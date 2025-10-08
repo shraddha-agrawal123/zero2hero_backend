@@ -1,7 +1,8 @@
 # --- Core Build Tools ---
 pip>=24.0
-setuptools>=75.1.0
-wheel>=0.44.0
+setuptools>=70.0
+wheel>=0.43
+
 
 # --- Flask & Mongo ---
 Flask==3.0.3
