@@ -2,32 +2,28 @@
 Flask>=3.0
 Flask-Cors>=4.0
 Flask-PyMongo>=2.3
-Werkzeug>=3.1       # optional, installed with Flask
+Werkzeug>=3.1       # optional
 
 # --- ML / AI ---
-tensorflow-cpu>=2.20  # CPU version works on free-tier Render
-numpy>=1.26           # let pip resolve compatible version automatically
+tensorflow-cpu>=2.20
+numpy>=1.26
 matplotlib>=3.9
 pillow>=10
 h5py>=3.13
-gdown>=4.7            # download model from Google Drive
+gdown>=4.7
 
 # --- Computer Vision ---
-opencv-python>=4.10
+opencv-python-headless==4.8.0.74
 scikit-image>=0.24
 
 # --- Database ---
 pymongo>=4.9
-dnspython>=2.6        # needed for MongoDB Atlas SRV URLs
+dnspython>=2.6
 
 # --- Geolocation ---
 geopy>=2.4
 
-# --- Utilities ---
-wrapt                 # optional, installed by TensorFlow automatically
-zstandard             # optional, compression library
-
-# --- Build tools (ensure modern pip) ---
+# --- Build tools ---
 pip>=25.2
 setuptools>=68.0
 wheel>=0.42
