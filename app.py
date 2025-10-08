@@ -17,6 +17,7 @@ import logging
 import random
 import cv2
 import numpy as np
+from model_loader import get_model
 from skimage.metrics import structural_similarity as ssim
 
 
@@ -45,8 +46,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Load the trained model (with error handling)
 try:
-    model = tf.keras.models.load_model('waste_classifier_model.h5')
-    print("✅ Model loaded successfully!")
+    model = get_model()
+    print("✅ Model loaded successfully via Google Drive!")
 except Exception as e:
     print(f"⚠️ Model loading failed: {e}")
     model = None
